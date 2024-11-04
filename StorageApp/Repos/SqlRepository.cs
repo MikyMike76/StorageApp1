@@ -10,6 +10,8 @@ namespace StorageApp.Repos
         public EventHandler<T>? itemRemoved;
         private readonly DbSet<T> _dbSet;
         private readonly DbContext _dbContext;
+        private const string FileMedicine = "medicinesInFile.txt";
+        private const string FileOffers = "offersInFile.txt";
 
         public SqlRepository(DbContext dbContext)
         {
@@ -36,6 +38,10 @@ namespace StorageApp.Repos
         public void Add(T item)
         {
             _dbSet.Add(item);
+            using (var writer = File.AppendText(FileMedicine))
+            {
+                writer.WriteLine(item);
+            }
             itemAdded?.Invoke(this, item);
         }
         public void Remove(T item)
