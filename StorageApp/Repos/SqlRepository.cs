@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StorageApp.Entities;
+using System.Text.Json;
 
 namespace StorageApp.Repos
 {
@@ -10,8 +11,6 @@ namespace StorageApp.Repos
         public EventHandler<T>? itemRemoved;
         private readonly DbSet<T> _dbSet;
         private readonly DbContext _dbContext;
-        private const string FileMedicine = "medicinesInFile.txt";
-        private const string FileOffers = "offersInFile.txt";
 
         public SqlRepository(DbContext dbContext)
         {
@@ -28,7 +27,7 @@ namespace StorageApp.Repos
         }
         public void Update (T item)
         {
-            var itemToUpdate = _dbSet.Find(item.Id);/*Where(i => i.Id == item.Id).FirstOrDefault();*/
+            var itemToUpdate = _dbSet.Where(i => i.Id == item.Id).FirstOrDefault();
             if (itemToUpdate != null)
             {
                 _dbContext.Entry(itemToUpdate).CurrentValues.SetValues(item);
@@ -37,16 +36,48 @@ namespace StorageApp.Repos
         }
         public void Add(T item)
         {
-            _dbSet.Add(item);
-            using (var writer = File.AppendText(FileMedicine))
+            var lastItem = _dbSet.LastOrDefault();
+            if (lastItem != null)
             {
-                writer.WriteLine(item);
+                item.Id = lastItem.Id + 1;
+
             }
-            itemAdded?.Invoke(this, item);
+            else
+            {
+                item.Id = 1;
+            }
+            _dbSet.Add(item);
+            itemAdded.Invoke(this, item);
         }
         public void Remove(T item)
         {
             _dbSet.Remove(item);
+            itemRemoved.Invoke(this, item);
+        }
+        public void Deserialize()
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string filePath = Path.Combine(path, "saveFile.json");
+            string content = null;
+            using (var reader = new StreamReader(filePath))
+            {
+                content = reader.ReadToEnd();
+            }
+            var deserializedObject = JsonSerializer.Deserialize<DbSet<T>>(content);
+            _dbSet.AddRange(deserializedObject);
+
+        }
+        public void SaveInFile()
+        {
+            var options = new JsonSerializerOptions();
+            options.WriteIndented = true;
+            var serializedObject = JsonSerializer.Serialize<DbSet<T>>(_dbSet, options);
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string filePath = Path.Combine(path, "saveFile.json");
+            using (StreamWriter sw = new StreamWriter(filePath))
+            {
+                sw.Write(serializedObject);
+            }
         }
         public void Save()
         {
