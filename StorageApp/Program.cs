@@ -4,24 +4,19 @@ using StorageApp.Repos;
 using StorageApp.Repos.Extensions;
 
 var medicineRepo = new SqlRepository<Medicine>(new StorageAppDbContext());
+medicineRepo.Deserialize();
 medicineRepo.itemAdded += OnMedicineAdded;
 medicineRepo.itemUpdated += OnMedicineUpdated;
 medicineRepo.itemRemoved += OnMedicineRemoved;
+medicineRepo.itemSavedInJson += OnItemSavedInJson;
+medicineRepo.Save();
 
 var offerRepo = new SqlRepository<Offer>(new StorageAppDbContext());
+offerRepo.Deserialize();
 offerRepo.itemAdded += OnOfferAdded;
 offerRepo.itemUpdated += OnOfferUpdated;
 offerRepo.itemRemoved += OnOfferRemoved;
-
-var medicines1 = new Medicine { Name = "Ibum" };
-medicineRepo.Add(medicines1);
-medicineRepo.Save();
-
-var offers1 = new Offer {NameOfCompany = "Neuca"};
-offerRepo.Add(offers1);
 offerRepo.Save();
-medicineRepo.SaveInFile();
-offerRepo.SaveInFile();
 
 Console.WriteLine("------------------------MENU------------------------");
 Console.WriteLine("Welcome to StorageApp!");
@@ -60,28 +55,83 @@ if (choiceEntity == "1") //Enter Medicine
         {
             case 1:
                 Console.WriteLine("You've entered \"Add\"");
+                Console.WriteLine();
                 Console.Write("Provide the name of new Medicine: ");
-                var nameOfNewMedicine = Console.ReadLine();
-                Console.Write($"Now provide the amount of {nameOfNewMedicine}: ");
-                var amountOfNewMedicine = Console.ReadLine();
-                if (int.TryParse(amountOfNewMedicine, out int amountOfNewMedicineFloat))
+                var nameOfNewItem = Console.ReadLine();
+                Console.Write($"Now provide the amount of {nameOfNewItem}: ");
+                var amountOfNewItem = Console.ReadLine();
+                if (int.TryParse(amountOfNewItem, out int amountOfNewItemInt))
                 {
-                    var medicines = new[]
+                    var items = new[]
                     {
-                        new Medicine {Name =  nameOfNewMedicine, Amount = amountOfNewMedicineFloat},
+                        new Medicine {Name =  nameOfNewItem, Amount = amountOfNewItemInt},
                     };
-                    medicineRepo.AddBatch(medicines);
+                    medicineRepo.AddBatch(items);
+                    Console.WriteLine("Do you want Save the result in .json?");
+                    Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                    var saveInFile = Console.ReadLine();
+                    if (saveInFile == "1")
+                    {
+                        medicineRepo.SaveInFile();
+                    }
+                    else
+                    {
+                        Console.WriteLine("The data you've added wasn't saved in file!");
+                    }
                 }
                 else
                 {
-                    Console.WriteLine("Wrong input");
+                    Console.WriteLine("Wrong input in Id or/also Amount. Use only digits without spaces!");
                 }
                 break;
             case 2:
-                Console.WriteLine("You've entered \"Offers\"");
+                Console.WriteLine("You've entered \"Update\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to update: ");
+                var idOfItemToUpdate = Console.ReadLine();
+                Console.WriteLine();
+                Console.Write("Now provide the new name of Medicine: ");
+                var newNameOfItem = Console.ReadLine();
+                Console.WriteLine();
+                Console.Write("Now provide the new amount of Medicine: ");
+                var newAmountOfItem = Console.ReadLine();
+                if (int.TryParse(newAmountOfItem, out int newAmountOfItemInt) && int.TryParse(idOfItemToUpdate, out int idOfItemToUpdateInt))
+                {
+                    var itemToUpdate = new Medicine { Id = idOfItemToUpdateInt,  Name = newNameOfItem, Amount = newAmountOfItemInt };
+                    medicineRepo.Update(itemToUpdate);
+                    medicineRepo.Save();
+                    Console.WriteLine("Do you want Save the result in .json?");
+                    Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                    var saveInFile = Console.ReadLine();
+                    if (saveInFile == "1")
+                    {
+                        medicineRepo.SaveInFile();
+                    }
+                    else
+                    {
+                        Console.WriteLine("The data you've added wasn't saved in file!");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in Amount. Use only digits without spaces!");
+                }
                 break;
             case 3:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("You've entered \"Find and Display Item\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to Find and Display: ");
+                var idOfItemToFind = Console.ReadLine();
+                Console.WriteLine();
+                if (int.TryParse(idOfItemToFind, out int idOfItemToFindInt))
+                {
+                    var itemToDisplay = medicineRepo.GetById(idOfItemToFindInt);
+                    Console.WriteLine(itemToDisplay.ToString());
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in Id or/also Amount. Use only digits without spaces!");
+                }
                 break;
             case 4:
                 Console.WriteLine("You've entered \"Medicine\"");
@@ -140,12 +190,12 @@ else //choiceEntity == "2"; //Enter Offers
 
 static void OnMedicineAdded(object? sender, Medicine medicine)
 {
-    Console.WriteLine($"New medicine {medicine.Name} was added! Amount: {medicine.Amount}");
+    Console.WriteLine($"New medicine {medicine.Name} was added! Amount: {medicine.Amount}, Id: \"{medicine.Id}\"");
 }
 
 static void OnOfferAdded(object? sender, Offer offer)
 {
-    Console.WriteLine($"New medicine {offer.NameOfCompany} was added!");
+    Console.WriteLine($"New medicine {offer.NameOfCompany} was added! Id: \"{offer.Id}\"");
 }
 
 static void OnMedicineUpdated(object? sender, Medicine medicine)
@@ -165,4 +215,8 @@ static void OnMedicineRemoved(object? sender, Medicine medicine)
 static void OnOfferRemoved(object? sender, Offer offer)
 {
     Console.WriteLine($"Offer Id: \"{offer.Id}\" name: {offer.NameOfCompany} was removed!");
+}
+static void OnItemSavedInJson(object? sender, EventArgs e)
+{
+    Console.WriteLine("Data was saved in .json");
 }

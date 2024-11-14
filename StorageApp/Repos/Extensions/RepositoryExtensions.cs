@@ -9,8 +9,9 @@ namespace StorageApp.Repos.Extensions
             foreach (var item in items)
             {
                 repository.Add(item);
+                repository.Save();
             }
-            repository.Save();
+            
         }
 
     }

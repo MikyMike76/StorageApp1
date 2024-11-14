@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StorageApp.Entities;
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace StorageApp.Repos
@@ -9,6 +10,7 @@ namespace StorageApp.Repos
         public EventHandler<T>? itemAdded;
         public EventHandler<T>? itemUpdated;
         public EventHandler<T>? itemRemoved;
+        public EventHandler itemSavedInJson;
         private readonly DbSet<T> _dbSet;
         private readonly DbContext _dbContext;
 
@@ -49,35 +51,43 @@ namespace StorageApp.Repos
             _dbSet.Add(item);
             itemAdded.Invoke(this, item);
         }
-        public void Remove(T item)
+        public void Remove(int id)
         {
-            _dbSet.Remove(item);
-            itemRemoved.Invoke(this, item);
+            T itemToRemove = _dbSet.Find(id);
+            _dbSet.Remove(itemToRemove);
+            itemRemoved.Invoke(this, itemToRemove);
         }
         public void Deserialize()
         {
+            var type = _dbSet.GetType();
             string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string filePath = Path.Combine(path, "saveFile.json");
+            string filePath = Path.Combine(path, $"saveFile{type}.json");
+            var options = new JsonSerializerOptions();
+            options.WriteIndented = true;
             string content = null;
-            using (var reader = new StreamReader(filePath))
+            if (File.Exists(filePath))
             {
-                content = reader.ReadToEnd();
+                using (var sr = new StreamReader(filePath))
+                {
+                    content = sr.ReadToEnd();
+                }
+                var deserializedObject = JsonSerializer.Deserialize<List<T>> (content, options);
+                _dbSet.AddRange(deserializedObject);
             }
-            var deserializedObject = JsonSerializer.Deserialize<DbSet<T>>(content);
-            _dbSet.AddRange(deserializedObject);
-
         }
         public void SaveInFile()
         {
+            var type = _dbSet.GetType();
             var options = new JsonSerializerOptions();
             options.WriteIndented = true;
             var serializedObject = JsonSerializer.Serialize<DbSet<T>>(_dbSet, options);
             string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string filePath = Path.Combine(path, "saveFile.json");
-            using (StreamWriter sw = new StreamWriter(filePath))
+            string filePath = Path.Combine(path, $"saveFile{type}.json");
+            using (var sw = new StreamWriter(filePath))
             {
                 sw.Write(serializedObject);
             }
+            itemSavedInJson.Invoke(this, EventArgs.Empty);
         }
         public void Save()
         {
