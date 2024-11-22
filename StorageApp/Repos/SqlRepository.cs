@@ -10,7 +10,8 @@ namespace StorageApp.Repos
         public EventHandler<T>? itemAdded;
         public EventHandler<T>? itemUpdated;
         public EventHandler<T>? itemRemoved;
-        public EventHandler itemSavedInJson;
+        public EventHandler? itemSavedInJson;
+        public EventHandler? itemAuditFile;
         private readonly DbSet<T> _dbSet;
         private readonly DbContext _dbContext;
 
@@ -49,6 +50,7 @@ namespace StorageApp.Repos
                 item.Id = 1;
             }
             _dbSet.Add(item);
+            SaveLogsInAuditFile("Added");
             itemAdded.Invoke(this, item);
         }
         public void Remove(int id)
@@ -78,20 +80,37 @@ namespace StorageApp.Repos
         public void SaveInFile()
         {
             var type = _dbSet.GetType();
+            var typeToString = type.ToString().Substring(75);
             var options = new JsonSerializerOptions();
             options.WriteIndented = true;
             var serializedObject = JsonSerializer.Serialize<DbSet<T>>(_dbSet, options);
             string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string filePath = Path.Combine(path, $"saveFile{type}.json");
+            string filePath = Path.Combine(path, $"saveFile{typeToString}.json");
             using (var sw = new StreamWriter(filePath))
             {
                 sw.Write(serializedObject);
             }
+            SaveLogsInAuditFile("Saved");
             itemSavedInJson.Invoke(this, EventArgs.Empty);
         }
         public void Save()
         {
             _dbContext.SaveChanges();
+        }
+        public void SaveLogsInAuditFile(string nameOfMethod)
+        {
+            var typeSample = _dbSet.Find(1);
+            var type = typeSample.GetType();
+            var typeToString = type.ToString().Substring(20);
+            var date = DateTime.Now;
+            var info = date + " " + typeToString + nameOfMethod;
+            var serializedObject = JsonSerializer.Serialize(info);
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string filePath = Path.Combine(path, $"auditFile.json");
+            using (var sw = File.AppendText(filePath))
+            {
+                sw.WriteLine(serializedObject);
+            }
         }
     }
 }
