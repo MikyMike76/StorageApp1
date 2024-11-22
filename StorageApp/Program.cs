@@ -16,27 +16,38 @@ offerRepo.Deserialize();
 offerRepo.itemAdded += OnOfferAdded;
 offerRepo.itemUpdated += OnOfferUpdated;
 offerRepo.itemRemoved += OnOfferRemoved;
+offerRepo.itemSavedInJson += OnItemSavedInJson;
 offerRepo.Save();
 
 Console.WriteLine("------------------------MENU------------------------");
 Console.WriteLine("Welcome to StorageApp!");
-Console.WriteLine("Choose what entity you want to enter:");
-Console.WriteLine("Press \"1\" - enter \"Medicine\"");
-Console.WriteLine("Press \"2\" - enter \"Offers\"");
-var choiceEntity = Console.ReadLine();
-if (int.TryParse(choiceEntity, out int choiceEntityInt))
+string choiceEntity =  EnterEntity();
+static string EnterEntity()
 {
-    switch(choiceEntityInt)
+    Console.WriteLine("Choose what entity you want to enter:");
+    Console.WriteLine("Press \"1\" - enter \"Medicine\"");
+    Console.WriteLine("Press \"2\" - enter \"Offers\"");
+    var choiceEntity = Console.ReadLine();
+    if (int.TryParse(choiceEntity, out int choiceEntityInt))
     {
-        case 1:
-            Console.WriteLine("You've entered \"Medicine\"");
-            break;
-        case 2:
-            Console.WriteLine("You've entered \"Offers\"");
-            break ;
-        default:
-            Console.WriteLine("Wrong input");
-            break;
+        switch (choiceEntityInt)
+        {
+            case 1:
+                Console.WriteLine("You've entered \"Medicine\"");
+                return choiceEntity;
+            case 2:
+                Console.WriteLine("You've entered \"Offers\"");
+                return choiceEntity;
+            default:
+                Console.WriteLine("Wrong input");
+                EnterEntity();
+                return null;
+        }
+    }
+    else
+    {
+        Console.WriteLine();
+        return null;
     }
 }
 
@@ -45,7 +56,8 @@ Console.WriteLine("Press \"1\" - to Add new item");
 Console.WriteLine("Press \"2\" - to Update item");
 Console.WriteLine("Press \"3\" - to Find and display item");
 Console.WriteLine("Press \"4\" - to Delete item");
-Console.WriteLine("Press \"5\" - to Save changes");
+Console.WriteLine("Press \"5\" - to List all items");
+
 var choiceAction = Console.ReadLine();
 if (choiceEntity == "1") //Enter Medicine
 {
@@ -126,7 +138,14 @@ if (choiceEntity == "1") //Enter Medicine
                 if (int.TryParse(idOfItemToFind, out int idOfItemToFindInt))
                 {
                     var itemToDisplay = medicineRepo.GetById(idOfItemToFindInt);
-                    Console.WriteLine(itemToDisplay.ToString());
+                    if(itemToDisplay != null)
+                    {
+                        Console.WriteLine(itemToDisplay.ToString());
+                    }
+                    else
+                    {
+                        Console.WriteLine("There's no item with that ID");
+                    }
                 }
                 else
                 {
@@ -134,10 +153,40 @@ if (choiceEntity == "1") //Enter Medicine
                 }
                 break;
             case 4:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("You've entered \"Delete Item\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to Delete: ");
+                var idOfItemToDelete = Console.ReadLine();
+                Console.WriteLine();
+                if (int.TryParse(idOfItemToDelete, out int idOfItemToDeleteInt))
+                {
+                    medicineRepo.Remove(idOfItemToDeleteInt);
+                    medicineRepo.Save();
+                    Console.WriteLine("Do you want Save the result in .json?");
+                    Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                    var saveInFile = Console.ReadLine();
+                    if (saveInFile == "1")
+                    {
+                        medicineRepo.SaveInFile();
+                    }
+                    else
+                    {
+                        Console.WriteLine("The data you've added wasn't saved in file!");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in Id. Use only digits without spaces!");
+                }
                 break;
             case 5:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("All Items from \"Medicine\" are listed below:");
+                Console.WriteLine();
+                var list = medicineRepo.GetAll();
+                foreach (var item in list)
+                {
+                    Console.WriteLine(item.ToString());
+                }
                 break;
             default:
                 Console.WriteLine("Wrong input");
@@ -151,31 +200,121 @@ if (choiceEntity == "1") //Enter Medicine
 }
 else //choiceEntity == "2"; //Enter Offers
 {
-    if (float.TryParse(choiceAction, out float choiceActionFloat))
+    if (int.TryParse(choiceAction, out int choiceActionInt))
     {
-        switch (choiceActionFloat)
+        switch (choiceActionInt)
         {
             case 1:
                 Console.WriteLine("You've entered \"Add\"");
-                Console.Write("Provide the new Offer company name: ");
-                var nameOfNewCompany = Console.ReadLine();
-                var offers = new[]
+                Console.WriteLine();
+                Console.Write("Provide the name of new Offer: ");
+                var nameOfNewItem = Console.ReadLine();
+                var items = new[]
                 {
-                   new Offer {NameOfCompany =  nameOfNewCompany},
+                new Offer {NameOfCompany =  nameOfNewItem},
                 };
-                offerRepo.AddBatch(offers);
+                offerRepo.AddBatch(items);
+                Console.WriteLine("Do you want Save the result in .json?");
+                Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                var saveInFile = Console.ReadLine();
+                if (saveInFile == "1")
+                {
+                    offerRepo.SaveInFile();
+                }
+                else
+                {
+                    Console.WriteLine("The data you've added wasn't saved in file!");
+                }
                 break;
             case 2:
-                Console.WriteLine("You've entered \"Offers\"");
+                Console.WriteLine("You've entered \"Update\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to update: ");
+                var idOfItemToUpdate = Console.ReadLine();
+                Console.WriteLine();
+                Console.Write("Now provide the new name of Medicine: ");
+                var newNameOfItem = Console.ReadLine();
+                Console.WriteLine();
+                if (int.TryParse(idOfItemToUpdate, out int idOfItemToUpdateInt))
+                {
+                    var itemToUpdate = new Offer { Id = idOfItemToUpdateInt, NameOfCompany = newNameOfItem };
+                    offerRepo.Update(itemToUpdate);
+                    offerRepo.Save();
+                    Console.WriteLine("Do you want Save the result in .json?");
+                    Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                    var saveInFileOffer = Console.ReadLine();
+                    if (saveInFileOffer == "1")
+                    {
+                        offerRepo.SaveInFile();
+                    }
+                    else
+                    {
+                        Console.WriteLine("The data you've added wasn't saved in file!");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in ID. Use only digits without spaces!");
+                }
                 break;
             case 3:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("You've entered \"Find and Display Item\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to Find and Display: ");
+                var idOfItemToFind = Console.ReadLine();
+                Console.WriteLine();
+                if (int.TryParse(idOfItemToFind, out int idOfItemToFindInt))
+                {
+                    var itemToDisplay = offerRepo.GetById(idOfItemToFindInt);
+                    if (itemToDisplay != null)
+                    {
+                        Console.WriteLine(itemToDisplay.ToString());
+                    }
+                    else
+                    {
+                        Console.WriteLine("There's no item with that ID");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in Id or/also Amount. Use only digits without spaces!");
+                }
                 break;
             case 4:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("You've entered \"Delete Item\"");
+                Console.WriteLine();
+                Console.Write("Now provide the Id number of item, you want to Delete: ");
+                var idOfItemToDelete = Console.ReadLine();
+                Console.WriteLine();
+                if (int.TryParse(idOfItemToDelete, out int idOfItemToDeleteInt))
+                {
+                    offerRepo.Remove(idOfItemToDeleteInt);
+                    offerRepo.Save();
+                    Console.WriteLine("Do you want Save the result in .json?");
+                    Console.WriteLine("1 -\"yes\", 2 -\"no\"");
+                    var saveInFileOffer = Console.ReadLine();
+                    if (saveInFileOffer == "1")
+                    {
+                        offerRepo.SaveInFile();
+                    }
+                    else
+                    {
+                        Console.WriteLine("The data you've added wasn't saved in file!");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Wrong input in Id. Use only digits without spaces!");
+                }
                 break;
             case 5:
-                Console.WriteLine("You've entered \"Medicine\"");
+                Console.WriteLine("All Items from \"Medicine\" are listed below:");
+                Console.WriteLine();
+                var list = offerRepo.GetAll();
+                foreach (var item in list)
+                {
+                    Console.WriteLine(item.ToString());
+                }
                 break;
             default:
                 Console.WriteLine("Wrong input");
